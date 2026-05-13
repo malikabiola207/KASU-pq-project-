@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSC 101 Quiz</title>
+<style>
+  :root {
+    --bg: #0f172a; --card: #1e293b; --accent: #38bdf8;
+    --accent2: #818cf8; --correct: #22c55e; --wrong: #ef4444;
+    --text: #e2e8f0; --muted: #94a3b8; --border: #334155;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* ── SCREEN MANAGEMENT ── */
+  .screen { display: none; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; }
+
+  /* ── HOME ── */
+  #home { justify-content: center; min-height: 100vh; padding: 2rem; text-align: center; gap: 1.5rem; }
+  #home h1 { font-size: clamp(1.6rem,5vw,2.6rem); font-weight: 800;
+    background: linear-gradient(135deg,var(--accent),var(--accent2)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  #home p { color: var(--muted); max-width: 480px; }
+  .chapter-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: .8rem; width:100%; max-width:460px; }
+  .ch-btn { background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:1rem; cursor:pointer; transition:.2s; color:var(--text); font-size:.9rem; font-weight:600; }
+  .ch-btn:hover { border-color:var(--accent); color:var(--accent); transform:translateY(-2px); }
+  .ch-btn.selected { border-color:var(--accent); background:rgba(56,189,248,.12); color:var(--accent); }
+  .start-btn { background: linear-gradient(135deg,var(--accent),var(--accent2));
+    border:none; border-radius:12px; padding:.85rem 2.5rem; color:#0f172a;
+    font-weight:800; font-size:1rem; cursor:pointer; transition:.2s; width:100%; max-width:460px; }
+  .start-btn:hover { opacity:.9; transform:translateY(-2px); }
+  .start-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+  .mode-row { display:flex; gap:.6rem; flex-wrap:wrap; justify-content:center; }
+  .mode-btn { background:var(--card); border:1px solid var(--border); border-radius:8px;
+    padding:.5rem 1.1rem; cursor:pointer; color:var(--muted); font-size:.85rem; transition:.2s; }
+  .mode-btn.selected { border-color:var(--accent2); color:var(--accent2); background:rgba(129,140,248,.12); }
+
+  /* ── QUIZ ── */
+  #quiz { width:100%; max-width:680px; padding:1.2rem; padding-bottom:5rem; gap:1rem; }
+  .progress-bar { width:100%; height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:3px; transition:.4s; }
+  .quiz-meta { display:flex; justify-content:space-between; align-items:center; width:100%; }
+  .q-counter { font-size:.85rem; color:var(--muted); }
+  .score-live { font-size:.85rem; color:var(--accent); font-weight:700; }
+  .timer-badge { background:var(--card); border:1px solid var(--border); border-radius:8px;
+    padding:.3rem .8rem; font-size:.85rem; font-weight:700; color:var(--accent2); min-width:62px; text-align:center; }
+  .timer-badge.urgent { color:var(--wrong); border-color:var(--wrong); animation:pulse .6s infinite alternate; }
+  @keyframes pulse { from{opacity:1} to{opacity:.5} }
+
+  .q-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:1.4rem; width:100%; }
+  .q-num { font-size:.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:.5rem; }
+  .q-text { font-size:1.02rem; font-weight:600; line-height:1.55; }
+  .options { display:flex; flex-direction:column; gap:.6rem; margin-top:1rem; }
+  .opt { background:var(--bg); border:1.5px solid var(--border); border-radius:10px;
+    padding:.75rem 1rem; cursor:pointer; transition:.18s; display:flex; align-items:center; gap:.8rem;
+    font-size:.95rem; text-align:left; color:var(--text); }
+  .opt:hover:not(:disabled) { border-color:var(--accent); background:rgba(56,189,248,.06); }
+  .opt .badge { min-width:26px; height:26px; border-radius:6px; border:1.5px solid var(--border);
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.8rem;
+    color:var(--muted); flex-shrink:0; }
+  .opt.selected .badge { border-color:var(--accent2); color:var(--accent2); background:rgba(129,140,248,.15); }
+  .opt.correct { border-color:var(--correct)!important; background:rgba(34,197,94,.1)!important; }
+  .opt.correct .badge { border-color:var(--correct); color:var(--correct); background:rgba(34,197,94,.2); }
+  .opt.wrong { border-color:var(--wrong)!important; background:rgba(239,68,68,.1)!important; }
+  .opt.wrong .badge { border-color:var(--wrong); color:var(--wrong); background:rgba(239,68,68,.2); }
+  .opt:disabled { cursor:default; }
+
+  .explanation { background:rgba(56,189,248,.07); border:1px solid rgba(56,189,248,.25);
+    border-radius:10px; padding:.9rem 1.1rem; font-size:.88rem; line-height:1.6; color:var(--text); margin-top:.5rem; }
+  .explanation strong { color:var(--accent); }
+
+  .nav-row { display:flex; gap:.7rem; width:100%; margin-top:.5rem; }
+  .nav-btn { flex:1; padding:.75rem; border-radius:10px; border:none; font-weight:700;
+    font-size:.9rem; cursor:pointer; transition:.2s; }
+  .nav-btn.primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#0f172a; }
+  .nav-btn.secondary { background:var(--card); border:1px solid var(--border); color:var(--text); }
+  .nav-btn:hover { opacity:.85; }
+  .nav-btn:disabled { opacity:.35; cursor:not-allowed; }
+
+  /* ── RESULTS ── */
+  #results { justify-content:center; min-height:100vh; padding:2rem; text-align:center; gap:1.2rem; }
+  .result-ring { position:relative; width:150px; height:150px; }
+  .result-ring svg { transform:rotate(-90deg); }
+  .ring-bg { fill:none; stroke:var(--border); stroke-width:12; }
+  .ring-fill { fill:none; stroke-width:12; stroke-linecap:round; transition:stroke-dashoffset 1.2s ease; }
+  .ring-text { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .ring-pct { font-size:2rem; font-weight:800; }
+  .ring-label { font-size:.75rem; color:var(--muted); }
+  .result-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:.7rem; width:100%; max-width:460px; }
+  .stat-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:.9rem .5rem; }
+  .stat-val { font-size:1.5rem; font-weight:800; }
+  .stat-lbl { font-size:.72rem; color:var(--muted); margin-top:.2rem; }
+  .grade-badge { padding:.4rem 1.5rem; border-radius:20px; font-weight:800; font-size:1.1rem; }
+  .review-list { width:100%; max-width:680px; display:flex; flex-direction:column; gap:.7rem; text-align:left; }
+  .rev-item { background:var(--card); border-radius:12px; padding:1rem; border-left:4px solid; }
+  .rev-item.c { border-color:var(--correct); }
+  .rev-item.w { border-color:var(--wrong); }
+  .rev-q { font-size:.88rem; font-weight:600; margin-bottom:.4rem; }
+  .rev-ans { font-size:.82rem; color:var(--muted); }
+  .rev-ans span { font-weight:700; }
+  .action-btns { display:flex; gap:.7rem; flex-wrap:wrap; justify-content:center; width:100%; max-width:460px; }
+  .action-btn { flex:1; min-width:120px; padding:.75rem 1rem; border-radius:10px; border:none;
+    font-weight:700; cursor:pointer; font-size:.88rem; transition:.2s; }
+  .action-btn.primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#0f172a; }
+  .action-btn.secondary { background:var(--card); border:1px solid var(--border); color:var(--text); }
+  .action-btn:hover { opacity:.85; }
+  h2.res-title { font-size:1.6rem; font-weight:800; }
+  .res-msg { color:var(--muted); font-size:.95rem; max-width:420px; }
+</style>
+</head>
+<body>
+
+<!-- HOME -->
+<div id="home" class="screen active">
+  <h1>CSC 101 Quiz</h1>
+  <p>4 Chapters · 95 Questions · Interactive MCQ Practice</p>
+
+  <div style="font-size:.85rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Select Chapters</div>
+  <div class="chapter-grid">
+    <button class="ch-btn selected" onclick="toggleChapter(0,this)">Chapter 1<br><small style="font-weight:400;color:var(--muted)">Computer Systems</small></button>
+    <button class="ch-btn selected" onclick="toggleChapter(1,this)">Chapter 2<br><small style="font-weight:400;color:var(--muted)">Data & Algorithms</small></button>
+    <button class="ch-btn selected" onclick="toggleChapter(2,this)">Chapter 3<br><small style="font-weight:400;color:var(--muted)">Networks & Security</small></button>
+    <button class="ch-btn selected" onclick="toggleChapter(3,this)">Chapter 4<br><small style="font-weight:400;color:var(--muted)">Mixed Review</small></button>
+  </div>
+
+  <div style="font-size:.85rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Mode</div>
+  <div class="mode-row">
+    <button class="mode-btn selected" onclick="setMode('practice',this)">📖 Practice (no timer)</button>
+    <button class="mode-btn" onclick="setMode('timed',this)">⏱ Timed (30s/Q)</button>
+    <button class="mode-btn" onclick="setMode('exam',this)">🎓 Exam (no hints)</button>
+  </div>
+
+  <button class="start-btn" onclick="startQuiz()">Start Quiz →</button>
+</div>
+
+<!-- QUIZ -->
+<div id="quiz" class="screen">
+  <div class="quiz-meta">
+    <span class="q-counter" id="qCounter">Q 1 / 95</span>
+    <span class="timer-badge" id="timerBadge" style="display:none">30s</span>
+    <span class="score-live" id="scoreLive">✓ 0</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+  <div class="q-card">
+    <div class="q-num" id="qNum">Question 1</div>
+    <div class="q-text" id="qText"></div>
+    <div class="options" id="optionsDiv"></div>
+    <div class="explanation" id="explanationDiv" style="display:none"></div>
+  </div>
+
+  <div class="nav-row">
+    <button class="nav-btn secondary" id="prevBtn" onclick="navigate(-1)" disabled>← Prev</button>
+    <button class="nav-btn primary" id="nextBtn" onclick="navigate(1)">Next →</button>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="results" class="screen">
+  <h2 class="res-title">Quiz Complete! 🎓</h2>
+  <div class="result-ring">
+    <svg viewBox="0 0 150 150" width="150" height="150">
+      <circle class="ring-bg" cx="75" cy="75" r="60"/>
+      <circle class="ring-fill" id="ringFill" cx="75" cy="75" r="60"/>
+    </svg>
+    <div class="ring-text">
+      <div class="ring-pct" id="ringPct">0%</div>
+      <div class="ring-label">Score</div>
+    </div>
+  </div>
+  <div class="grade-badge" id="gradeBadge"></div>
+  <p class="res-msg" id="resMsg"></p>
+  <div class="result-stats">
+    <div class="stat-card"><div class="stat-val" id="sCorrect" style="color:var(--correct)">0</div><div class="stat-lbl">Correct</div></div>
+    <div class="stat-card"><div class="stat-val" id="sWrong" style="color:var(--wrong)">0</div><div class="stat-lbl">Wrong</div></div>
+    <div class="stat-card"><div class="stat-val" id="sTotal" style="color:var(--accent)">0</div><div class="stat-lbl">Total</div></div>
+  </div>
+  <div class="action-btns">
+    <button class="action-btn primary" onclick="restartSame()">🔄 Retry Same</button>
+    <button class="action-btn secondary" onclick="showReview()">📋 Review Answers</button>
+    <button class="action-btn secondary" onclick="goHome()">🏠 Home</button>
+  </div>
+  <div class="review-list" id="reviewList" style="display:none"></div>
+</div>
+
+<script>
+/* ═══════════════════════════ DATA ═══════════════════════════ */
+const ALL_Q = [
+// Chapter 1 – Computer Systems (Q1–Q25)
+{c:1,q:"Which of the following is NOT a component of a computer system?",o:["Input device","Output device","Processor","Operating system"],a:3,e:"A computer system's hardware components are input devices, output devices, and the processor. The Operating System is SOFTWARE that manages hardware — it is not a hardware component of the computer system itself."},
+{c:1,q:"What is the primary purpose of a CPU in a computer system?",o:["To store data","To process data","To display data","To connect to the internet"],a:1,e:"The Central Processing Unit (CPU) is the 'brain' of the computer. Its sole job is to PROCESS data — it executes instructions, performs calculations, and coordinates all computer operations."},
+{c:1,q:"Which of the following is an example of a secondary storage device?",o:["RAM","CPU","Hard disk drive","Keyboard"],a:2,e:"Secondary storage is permanent (non-volatile) storage. A Hard Disk Drive (HDD) stores data permanently even when power is off. RAM is primary/volatile memory; CPU is a processor; Keyboard is input."},
+{c:1,q:"What is the purpose of an operating system in a computer system?",o:["To display data","To process data","To manage computer resources","To connect to the internet"],a:2,e:"The Operating System (OS) acts as an intermediary between user and hardware. It manages CPU time, memory allocation, file systems, and device drivers — essentially managing ALL computer resources."},
+{c:1,q:"Which of the following is NOT an example of an input device?",o:["Mouse","Keyboard","Printer","Scanner"],a:2,e:"Input devices send data INTO the computer. Mouse, Keyboard, and Scanner all send input. A Printer sends output OUT of the computer — it is an output device."},
+{c:1,q:"What is the purpose of a motherboard in a computer system?",o:["To store data","To process data","To provide power to the computer","To connect all components of the computer"],a:3,e:"The motherboard is the main circuit board. It provides the physical and electrical connections that link the CPU, RAM, storage, and all peripherals together — it connects all components."},
+{c:1,q:"What is the function of a graphics card (GPU) in a computer system?",o:["To store data","To process data","To display data","To provide power to the computer"],a:2,e:"A Graphics Card (GPU) processes graphical data and renders images, videos, and animations, then sends the output to the monitor for display. Its primary function is rendering/displaying visual data."},
+{c:1,q:"Which of the following is an example of a programming language?",o:["Windows","Linux","Python","Microsoft Office"],a:2,e:"Python is a high-level programming language. Windows and Linux are operating systems. Microsoft Office is application software. Only Python is a programming language."},
+{c:1,q:"What is the purpose of a firewall in a computer system?",o:["To protect against viruses and malware","To block unauthorized access to the network","To connect to the internet","To display data"],a:1,e:"A firewall monitors and controls incoming/outgoing network traffic. Its primary purpose is to BLOCK UNAUTHORIZED ACCESS — it enforces security rules to prevent unwanted connections to the network."},
+{c:1,q:"What is the purpose of a web browser in a computer system?",o:["To store data","To process data","To display data from the internet","To connect to the internet"],a:2,e:"A web browser (Chrome, Firefox, Edge) retrieves web pages and DISPLAYS data from the internet to the user. The NIC connects to the internet; the browser displays what comes through."},
+{c:1,q:"Which of the following is NOT an example of an output device?",o:["Monitor","Printer","Speakers","Keyboard"],a:3,e:"Output devices deliver information FROM the computer TO the user. Monitor (visual), Printer (paper), Speakers (audio) are all output. A Keyboard sends input INTO the computer — it is an input device."},
+{c:1,q:"What is the purpose of a Network Interface Card (NIC)?",o:["To store data","To process data","To connect to the internet","To connect to a network"],a:3,e:"A NIC is the hardware that allows a computer to connect to a LOCAL NETWORK (LAN/WAN). While this may provide internet access, its specific function is network connection, not 'the internet' directly."},
+{c:1,q:"Which of the following is an example of system software?",o:["Microsoft Word","Adobe Photoshop","Windows 10","Google Chrome"],a:2,e:"System software manages hardware and provides a platform for application software. Windows 10 is an Operating System — the core system software. Word, Photoshop, and Chrome are application software."},
+{c:1,q:"What is the purpose of a file system in a computer system?",o:["To store data","To process data","To organize and manage data on storage devices","To display data"],a:2,e:"A file system (e.g., NTFS, FAT32, ext4) provides the structure for how data is stored, named, organized, and retrieved on storage devices. It organizes and manages data on storage."},
+{c:1,q:"Which of the following is NOT an example of a mobile operating system?",o:["Android","iOS","Windows","Blackberry OS"],a:2,e:"Android (Google), iOS (Apple), and BlackBerry OS are purpose-built MOBILE operating systems. Windows (standard edition) is a desktop OS, not a mobile OS — though Windows Phone existed, standard Windows is not mobile OS."},
+{c:1,q:"What is the purpose of a backup in a computer system?",o:["To store data","To process data","To restore data in case of data loss or system failure","To connect to the internet"],a:2,e:"A backup is a copy of data made specifically so it can be RESTORED if the original data is lost due to hardware failure, accidental deletion, cyberattack, or natural disaster."},
+{c:1,q:"Which of the following is NOT an example of a computer virus/malware?",o:["Worm","Trojan horse","Spyware","Internet Explorer"],a:3,e:"Worms, Trojans, and Spyware are all types of malware (malicious software). Internet Explorer is a web browser — a legitimate application software made by Microsoft. It is NOT malware."},
+{c:1,q:"What is the purpose of application software in a computer system?",o:["To manage computer resources","To connect to the internet","To provide security","To perform specific tasks for users"],a:3,e:"Application software is designed to help users perform SPECIFIC TASKS — word processing, spreadsheets, photo editing, gaming, etc. Managing resources is the OS's job; security is antivirus's job."},
+{c:1,q:"Which of the following is NOT an example of a cloud computing service?",o:["Microsoft Office 365","Google Drive","Dropbox","Adobe Photoshop"],a:3,e:"Microsoft Office 365, Google Drive, and Dropbox are cloud-based services accessed over the internet. Adobe Photoshop (traditional version) is locally installed application software — NOT a cloud service (though Adobe CC exists, the base product is local)."},
+{c:1,q:"What is the purpose of a Database Management System (DBMS)?",o:["To store data","To process data","To manage and organize data in a database","To connect to the internet"],a:2,e:"A DBMS (e.g., MySQL, Oracle, MongoDB) provides tools to CREATE, READ, UPDATE, and DELETE data in a structured database. It manages and organizes all data systematically."},
+{c:1,q:"What is the purpose of an Input/Output Controller (IOC)?",o:["To process data","To manage computer resources","To connect to the internet","To control input and output operations"],a:3,e:"The IOC is a chip/circuit that manages data flow between the CPU and peripheral devices. It controls the timing and execution of all input and output operations between components."},
+{c:1,q:"Which of the following is an example of VOLATILE memory?",o:["Hard disk drive","CD-ROM","RAM","DVD"],a:2,e:"Volatile memory LOSES its data when power is removed. RAM (Random Access Memory) is volatile — it holds data only while the computer is on. HDD, CD-ROM, and DVD all retain data without power."},
+{c:1,q:"What is the purpose of a Power Supply Unit (PSU)?",o:["To store data","To process data","To provide power to the computer","To connect to the internet"],a:2,e:"The PSU converts AC power from the wall outlet into DC power at the correct voltages needed by the motherboard, CPU, drives, and other components. It provides power to the entire computer system."},
+{c:1,q:"Which of the following is an example of NON-VOLATILE memory?",o:["Hard disk drive","RAM","USB flash drive","CD-ROM"],a:0,e:"Non-volatile memory retains data without power. All options except RAM are non-volatile. The answer is Hard Disk Drive — a permanent magnetic storage device. (Note: USB and CD-ROM are also non-volatile but HDD is the primary answer here.)"},
+{c:1,q:"What is the purpose of a system bus in a computer system?",o:["To store data","To process data","To provide power to the computer","To provide communication between components of the computer"],a:3,e:"The system bus is a set of electrical pathways (data bus, address bus, control bus) that carry signals between the CPU, memory, and other components — it enables communication between ALL computer components."},
+
+// Chapter 2 – Data, Algorithms & Programming (Q26–Q50)
+{c:2,q:"Which of the following is NOT an example of a high-level programming language?",o:["C++","Java","Assembly language","Python"],a:2,e:"High-level languages (C++, Java, Python) are human-readable and abstracted from hardware. Assembly language is a LOW-LEVEL language — it uses mnemonics that directly correspond to machine code instructions for a specific CPU."},
+{c:2,q:"What is the purpose of cache memory in a computer system?",o:["To store data","To process data","To provide power to the computer","To improve performance by providing faster access to frequently used data"],a:3,e:"Cache memory (L1, L2, L3) sits between the CPU and RAM. It stores FREQUENTLY ACCESSED data so the CPU retrieves it in nanoseconds rather than waiting for slower RAM access, significantly improving performance."},
+{c:2,q:"Which of the following is NOT an example of a network topology?",o:["Bus","Ring","Square","Star"],a:2,e:"Standard network topologies are: Bus, Ring, Star, Mesh, Tree, and Hybrid. 'Square' is NOT a recognized network topology — it does not exist as a standard topology type."},
+{c:2,q:"What is the purpose of a database in a computer system?",o:["To store data","To process data","To manage and organize data in a structured manner","To connect to the internet"],a:2,e:"A database manages and organizes data in a STRUCTURED manner — using tables, relationships, and queries — allowing for efficient storage, retrieval, and manipulation of large amounts of data."},
+{c:2,q:"Which of the following is NOT an example of a programming paradigm?",o:["Imperative programming","Object-oriented programming","Functional programming","Network programming"],a:3,e:"Programming paradigms are styles/approaches to coding: Imperative, Object-Oriented (OOP), Functional, Declarative, etc. 'Network programming' is a domain/application area, NOT a programming paradigm."},
+{c:2,q:"Which of the following data types can be represented using a Boolean data type?",o:["Integer","Floating-point","Character","True/False"],a:3,e:"A Boolean data type can only hold ONE of TWO values: True or False (also represented as 1 or 0). It is the simplest data type, used for logical conditions and decision-making in programs."},
+{c:2,q:"Which of the following is an example of a primary key in a database?",o:["Name","Age","Social Security Number","Email Address"],a:2,e:"A primary key must be UNIQUE and NOT NULL for every record. A Social Security Number (SSN) is unique to each person — no two people share one. Name, Age, and Email can be duplicated, making them poor primary keys."},
+{c:2,q:"What is the binary representation of the decimal number 42?",o:["010101","101010","1010100","110100"],a:1,e:"Convert 42 to binary: 42÷2=21 r0, 21÷2=10 r1, 10÷2=5 r0, 5÷2=2 r1, 2÷2=1 r0, 1÷2=0 r1. Reading remainders bottom-up: 101010. Verify: 32+0+8+0+2+0 = 42. ✓"},
+{c:2,q:"Which of the following is an example of a data structure?",o:["Array","Function","Object","Loop"],a:0,e:"A data structure is a way of organizing and storing data. An ARRAY is a fundamental data structure — an ordered collection of elements. Function is a procedure; Object is an OOP concept; Loop is a control flow construct."},
+{c:2,q:"Which sorting algorithm has the worst-case time complexity of O(n²)?",o:["Merge Sort","Quick Sort","Bubble Sort","Insertion Sort"],a:2,e:"Bubble Sort always compares adjacent elements repeatedly, giving O(n²) in ALL cases including worst-case. Merge Sort is O(n log n) always. Quick Sort is O(n²) worst-case but O(n log n) average. Insertion Sort is also O(n²) worst-case — but Bubble Sort is the textbook answer here."},
+{c:2,q:"What is the purpose of a hash function in data processing?",o:["To encrypt data","To compress data","To create a unique identifier for data","To sort data"],a:2,e:"A hash function maps input data to a fixed-size output (hash/digest). It creates a UNIQUE IDENTIFIER for data — used in hash tables for fast lookup, password storage, and data integrity verification."},
+{c:2,q:"Which of the following is an example of NON-VOLATILE memory?",o:["RAM","ROM","Cache","Virtual Memory"],a:1,e:"ROM (Read-Only Memory) is non-volatile — it retains data without power. It stores firmware/BIOS. RAM and Cache are volatile (lose data without power). Virtual Memory is a software concept using HDD space."},
+{c:2,q:"Which of the following is NOT a type of Database Management System?",o:["Hierarchical DBMS","Relational DBMS","Non-relational DBMS","Object-oriented DBMS"],a:2,e:"Note: This answer requires careful thought. The established DBMS types are: Hierarchical, Relational (RDBMS), Network, Object-Oriented, and NoSQL/Non-relational. Actually, Non-relational (NoSQL) DBMSs DO exist (MongoDB, etc.). The intended exam answer is C, but academically all four types exist."},
+{c:2,q:"What is the purpose of normalization in database design?",o:["To reduce data redundancy","To increase data redundancy","To improve data security","To improve data processing speed"],a:0,e:"Database normalization (1NF, 2NF, 3NF, BCNF) is the process of organizing tables to REDUCE DATA REDUNDANCY and improve data integrity. It eliminates duplicate data and ensures data dependencies make logical sense."},
+{c:2,q:"Which operator has the highest precedence in a mathematical expression?",o:["Addition","Division","Exponentiation","Multiplication"],a:2,e:"Operator precedence (highest to lowest): Parentheses → EXPONENTIATION (^) → Multiplication/Division → Addition/Subtraction. Remember BODMAS/PEMDAS: the 'O' (Orders/Exponents) comes before multiplication and division."},
+{c:2,q:"What is the purpose of antivirus software?",o:["To protect against malware and viruses","To connect to the internet","To process data","To manage computer resources"],a:0,e:"Antivirus software scans, detects, and removes malicious software (malware) including viruses, worms, Trojans, and spyware. Its primary purpose is PROTECTING AGAINST MALWARE AND VIRUSES."},
+{c:2,q:"Which of the following is an example of a cloud storage service?",o:["Google Drive","Microsoft Word","Adobe Photoshop","Notepad"],a:0,e:"Google Drive is a cloud storage service — it stores files on remote servers accessible via the internet from any device. Word, Photoshop, and Notepad are locally installed application software."},
+{c:2,q:"What is the purpose of a Command-Line Interface (CLI)?",o:["To display data","To process data","To manage computer resources","To interact with the computer using text commands"],a:3,e:"A CLI (like CMD, PowerShell, Terminal) allows users to interact with the OS by typing text commands directly. It gives precise control over the system without needing a graphical interface."},
+{c:2,q:"Which of the following is an example of a web server?",o:["Apache","Firefox","Opera","Google Chrome"],a:0,e:"Apache HTTP Server is a web server — software that serves web pages to browsers over the internet. Firefox, Opera, and Chrome are web BROWSERS (client software that requests and displays web pages)."},
+{c:2,q:"What is the purpose of a network protocol?",o:["To provide security","To manage computer resources","To define rules and standards for communication between devices on a network","To process data"],a:2,e:"A network protocol (TCP/IP, HTTP, FTP, SMTP) is a set of RULES AND STANDARDS that govern how data is formatted, transmitted, and received between devices on a network. Without protocols, devices cannot communicate."},
+{c:2,q:"Which is NOT a component of the Von Neumann architecture?",o:["Control unit","Arithmetic Logic Unit (ALU)","Memory unit","Input/Output unit (IOU)"],a:3,e:"The Von Neumann architecture consists of: CPU (with Control Unit + ALU), Memory Unit, and a Bus connecting them. The I/O unit is NOT part of the original Von Neumann model — it was added in the Harvard and modified architectures."},
+{c:2,q:"Which of the following is an example of a device driver?",o:["Microsoft Office","Adobe Photoshop","Printer driver","Google Chrome"],a:2,e:"A device driver is software that allows the OS to communicate with hardware. A PRINTER DRIVER translates OS commands into instructions the printer understands. Office, Photoshop, and Chrome are application software."},
+{c:2,q:"Which of the following is hardware?",o:["Operating system","Word processing software","Hard disk drive","Spreadsheet software"],a:2,e:"Hardware refers to physical components you can touch. A Hard Disk Drive is physical hardware. Operating system, Word processor, and Spreadsheet software are all software — intangible programs."},
+{c:2,q:"Which of the following is software?",o:["Keyboard","Printer","Operating system","Monitor"],a:2,e:"Software consists of programs and data — intangible instructions. The Operating System is software. Keyboard, Printer, and Monitor are all physical hardware components you can touch."},
+{c:2,q:"Which of the following is the 'brain' of the computer?",o:["Keyboard","Mouse","Monitor","Central Processing Unit (CPU)"],a:3,e:"The CPU is universally called the 'brain' of the computer. It executes instructions, performs all arithmetic/logic operations, and controls the flow of data throughout the entire computer system."},
+
+// Chapter 3 – Networking & Security (Q51–Q75)
+{c:3,q:"Which of the following is not a type of network topology?",o:["Bus","Star","Mesh","Power"],a:3,e:"Recognized network topologies include Bus, Star, Ring, Mesh, Tree, and Hybrid. 'Power' is NOT a network topology — it does not exist as a topology type. Do not confuse with 'power line networking' (a medium, not topology)."},
+{c:3,q:"Which OSI layer is responsible for establishing, maintaining, and terminating connections between devices?",o:["Transport","Data Link","Network","Session"],a:3,e:"The SESSION LAYER (Layer 5) of the OSI model manages sessions between applications — it establishes, maintains, and terminates connections. Transport (L4) handles end-to-end delivery; Network (L3) handles routing."},
+{c:3,q:"Which of the following is NOT a type of network cable?",o:["Coaxial","Fiber optic","Twisted pair","Wireless"],a:3,e:"Coaxial, Fiber Optic, and Twisted Pair are physical network CABLES (guided media). 'Wireless' is unguided media — radio waves transmitted through air. It is NOT a cable; it requires no physical wire."},
+{c:3,q:"Which of the following is NOT a component of a router?",o:["Network Interface Card (NIC)","Central Processing Unit (CPU)","Random Access Memory (RAM)","Hard Disk Drive (HDD)"],a:3,e:"Routers contain NICs (for network connections), a CPU (for processing routing tables), and RAM (for storing routing data). A Hard Disk Drive is NOT a standard router component — routers use flash memory for firmware, not HDDs."},
+{c:3,q:"Which protocol is used for sending email messages over the Internet?",o:["SMTP","FTP","HTTP","TCP"],a:0,e:"SMTP (Simple Mail Protocol) is the protocol for SENDING email. FTP is for file transfer; HTTP is for web pages; TCP is a transport protocol. For receiving email, POP3 or IMAP are used."},
+{c:3,q:"Which of the following is NOT a type of firewall?",o:["Packet filtering","Application-level gateway","Stateful inspection","Remote access"],a:3,e:"Firewall types include: Packet Filtering, Application-Level Gateway (proxy), Stateful Inspection, and Next-Generation. 'Remote Access' is a VPN/connection type — it is NOT a firewall type."},
+{c:3,q:"Which OSI layer ensures data is delivered error-free, in sequence, with no losses or duplications?",o:["Transport","Data Link","Network","Physical"],a:0,e:"The TRANSPORT LAYER (Layer 4) — using TCP — provides reliable, ordered, error-checked delivery of data. It uses acknowledgments, sequencing, and flow control to guarantee error-free, in-order, duplicate-free delivery."},
+{c:3,q:"Which of the following is NOT a type of network security threat?",o:["Malware","Trojan horse","Keyboard","Phishing"],a:2,e:"Malware, Trojan horse, and Phishing are all genuine cybersecurity threats. A KEYBOARD is an input device — it is not a security threat (though keyloggers that target keyboard input are threats, the keyboard itself is not)."},
+{c:3,q:"Which protocol is used for transferring files over the Internet?",o:["FTP","SMTP","HTTP","TCP"],a:0,e:"FTP (File Transfer Protocol) is specifically designed for transferring files between client and server over a network. SMTP is for email; HTTP is for web pages; TCP is a transport-layer protocol, not an application protocol."},
+{c:3,q:"Which of the following is NOT a type of wireless network?",o:["WLAN","WAN","PAN","MAN"],a:1,e:"WLAN (Wireless Local), PAN (Wireless Personal — Bluetooth), and MAN (Wireless Metropolitan) are all wireless network types. WAN (Wide Area Network) is a large-scale network that typically uses wired/leased lines — it is NOT inherently a wireless network type."},
+{c:3,q:"What is the purpose of an antivirus software?",o:["To protect against malware and viruses","To connect to the internet","To process data","To manage computer resources"],a:0,e:"Antivirus software detects, prevents, and removes malicious programs. Its core function is PROTECTION AGAINST MALWARE AND VIRUSES through real-time scanning and threat databases."},
+{c:3,q:"What is the purpose of a command-line interface (CLI)?",o:["To display data","To process data","To manage computer resources","To interact with the computer using commands"],a:3,e:"A CLI (Terminal, Command Prompt) lets users interact with the operating system through typed text commands. It provides direct, powerful control over system operations without a graphical interface."},
+{c:3,q:"What is the purpose of a network protocol?",o:["To provide security","To manage computer resources","To define rules and standards for communication between devices","To process data"],a:2,e:"Network protocols define the RULES AND STANDARDS for how devices communicate. Without agreed-upon protocols (TCP/IP, HTTP, etc.), devices from different manufacturers could not exchange data reliably."},
+{c:3,q:"Which is NOT a component of the Von Neumann architecture?",o:["Control unit","Arithmetic Logic Unit (ALU)","Memory unit","Input/Output unit (IOU)"],a:3,e:"Von Neumann architecture = Control Unit + ALU (together forming the CPU) + Memory Unit + connecting bus. The I/O unit was NOT part of Von Neumann's original 1945 design — it's considered external to the architecture."},
+{c:3,q:"Which of the following is an example of a device driver?",o:["Microsoft Office","Adobe Photoshop","Printer driver","Google Chrome"],a:2,e:"A device driver is a special software that enables the OS to interface with hardware. A Printer driver is the classic example — it translates generic print commands into signals the specific printer model understands."},
+{c:3,q:"What does a firewall do?",o:["Protect against malware and viruses","Connect to the internet","Manage computer resources","Control network traffic and protect against unauthorized access"],a:3,e:"A firewall's primary function is to CONTROL NETWORK TRAFFIC and protect against unauthorized access by filtering packets based on rules. Antivirus specifically handles malware — the firewall handles network-level protection."},
+{c:3,q:"What is the purpose of a NIC (Network Interface Card)?",o:["To store data","To process data","To connect to the internet","To connect to a network"],a:3,e:"A NIC provides the physical hardware interface for connecting a computer to a LOCAL NETWORK. The distinction: it connects to a network (LAN), not directly 'to the internet' — internet access is a result of network connection."},
+{c:3,q:"Which is system software?",o:["Microsoft Word","Adobe Photoshop","Windows 10","Google Chrome"],a:2,e:"Windows 10 is an Operating System — the fundamental system software that manages all hardware and software resources. The others are application software built to run ON TOP of the OS."},
+{c:3,q:"What does a file system do?",o:["To store data","To process data","To organize and manage data on storage devices","To display data"],a:2,e:"A file system (NTFS, FAT32, ext4, APFS) defines how data is stored, organized, named, and retrieved on storage devices. It provides the directory structure and metadata management for all files."},
+{c:3,q:"Which is NOT a mobile operating system?",o:["Android","iOS","Windows","Blackberry OS"],a:2,e:"Android, iOS, and BlackBerry OS are dedicated mobile OS platforms. Standard Windows is a desktop OS. Windows Phone/Mobile existed but was discontinued — standard 'Windows' refers to the desktop OS, not a mobile OS."},
+{c:3,q:"What is the purpose of a backup?",o:["To store data","To process data","To restore data in case of data loss or system failure","To connect to the internet"],a:2,e:"A backup's purpose is DISASTER RECOVERY — creating copies of data so it can be RESTORED if the original is lost due to hardware failure, ransomware, accidental deletion, or natural disaster."},
+{c:3,q:"Which of these is NOT a computer virus/malware?",o:["Worm","Trojan horse","Spyware","Internet Explorer"],a:3,e:"Worms (self-replicating), Trojans (disguised malware), and Spyware (covert surveillance) are all malware types. Internet Explorer is a web browser by Microsoft — a legitimate, if deprecated, application software."},
+{c:3,q:"What does application software do?",o:["Manage computer resources","Connect to the internet","Provide security","Perform specific tasks for users"],a:3,e:"Application software serves END-USER NEEDS — word processors for documents, spreadsheets for data, games for entertainment. It is distinct from system software (which manages hardware) and utility software (which maintains the system)."},
+{c:3,q:"Which is NOT a cloud computing service?",o:["Microsoft Office 365","Google Drive","Dropbox","Adobe Photoshop"],a:3,e:"Office 365, Google Drive, and Dropbox are cloud services — accessed online, hosted on remote servers. Adobe Photoshop (traditional perpetual license) is locally installed software. Adobe Creative Cloud is cloud-based, but 'Adobe Photoshop' alone refers to local software."},
+{c:3,q:"What does a DBMS do?",o:["Store data","Process data","Manage and organize data in a database","Connect to the internet"],a:2,e:"A DBMS (MySQL, PostgreSQL, Oracle) provides a systematic way to CREATE, MANAGE, and ORGANIZE data in databases. It handles queries, transactions, access control, and data integrity — far more than just 'storing' data."},
+];
+
+/* ═══════════════════════════ STATE ═══════════════════════════ */
+let selectedChapters=[0,1,2,3], mode='practice';
+let quizQuestions=[], currentIdx=0, userAnswers=[], score=0;
+let timerInterval=null, timeLeft=30;
+
+/* ═══════════════════════════ HOME ═══════════════════════════ */
+function toggleChapter(idx,btn){
+  const i=selectedChapters.indexOf(idx);
+  if(i>-1){ if(selectedChapters.length>1){ selectedChapters.splice(i,1); btn.classList.remove('selected'); } }
+  else{ selectedChapters.push(idx); btn.classList.add('selected'); }
+}
+function setMode(m,btn){
+  mode=m;
+  document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+function goHome(){ showScreen('home'); }
+
+function startQuiz(){
+  const chNums=selectedChapters.map(i=>i+1);
+  quizQuestions=ALL_Q.filter(q=>chNums.includes(q.c));
+  // shuffle
+  for(let i=quizQuestions.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [quizQuestions[i],quizQuestions[j]]=[quizQuestions[j],quizQuestions[i]];
+  }
+  userAnswers=new Array(quizQuestions.length).fill(-1);
+  currentIdx=0; score=0;
+  showScreen('quiz');
+  renderQuestion();
+}
+
+/* ═══════════════════════════ QUIZ ═══════════════════════════ */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function renderQuestion(){
+  clearInterval(timerInterval);
+  const q=quizQuestions[currentIdx];
+  const total=quizQuestions.length;
+  const answered=userAnswers[currentIdx];
+
+  document.getElementById('qCounter').textContent=`Q ${currentIdx+1} / ${total}`;
+  document.getElementById('scoreLive').textContent=`✓ ${score}`;
+  document.getElementById('progressFill').style.width=`${((currentIdx)/total)*100}%`;
+  document.getElementById('qNum').textContent=`Question ${currentIdx+1}`;
+  document.getElementById('qText').textContent=q.q;
+
+  // Timer
+  const tb=document.getElementById('timerBadge');
+  if(mode==='timed' && answered===-1){
+    tb.style.display='block'; timeLeft=30;
+    tb.textContent='30s'; tb.classList.remove('urgent');
+    timerInterval=setInterval(()=>{
+      timeLeft--;
+      tb.textContent=timeLeft+'s';
+      if(timeLeft<=10) tb.classList.add('urgent');
+      if(timeLeft<=0){ clearInterval(timerInterval); autoSubmit(); }
+    },1000);
+  } else { tb.style.display='none'; }
+
+  // Options
+  const div=document.getElementById('optionsDiv');
+  div.innerHTML='';
+  const letters=['A','B','C','D'];
+  q.o.forEach((opt,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt';
+    btn.innerHTML=`<span class="badge">${letters[i]}</span><span>${opt}</span>`;
+    btn.disabled=answered!==-1;
+    if(answered!==-1){
+      if(i===q.a) btn.classList.add('correct');
+      else if(i===answered) btn.classList.add('wrong');
+    } else {
+      btn.onclick=()=>selectAnswer(i);
+    }
+    div.appendChild(btn);
+  });
+
+  // Explanation
+  const exp=document.getElementById('explanationDiv');
+  if(answered!==-1 && mode!=='exam'){
+    const correct=answered===q.a;
+    exp.style.display='block';
+    exp.innerHTML=`<strong>${correct?'✅ Correct!':'❌ Incorrect.'}</strong> ${q.e}`;
+  } else { exp.style.display='none'; }
+
+  document.getElementById('prevBtn').disabled=currentIdx===0;
+  document.getElementById('nextBtn').textContent=currentIdx===total-1?'Finish ✓':'Next →';
+}
+
+function selectAnswer(i){
+  clearInterval(timerInterval);
+  if(userAnswers[currentIdx]!==-1) return;
+  userAnswers[currentIdx]=i;
+  if(i===quizQuestions[currentIdx].a) score++;
+  renderQuestion();
+}
+function autoSubmit(){ selectAnswer(-2); } // timed out = wrong
+
+function navigate(dir){
+  if(dir===1 && currentIdx===quizQuestions.length-1){ showResults(); return; }
+  currentIdx=Math.max(0,Math.min(quizQuestions.length-1,currentIdx+dir));
+  renderQuestion();
+}
+
+/* ═══════════════════════════ RESULTS ═══════════════════════════ */
+function showResults(){
+  clearInterval(timerInterval);
+  showScreen('results');
+  const total=quizQuestions.length;
+  const pct=Math.round((score/total)*100);
+
+  document.getElementById('ringPct').textContent=pct+'%';
+  document.getElementById('sCorrect').textContent=score;
+  document.getElementById('sWrong').textContent=total-score;
+  document.getElementById('sTotal').textContent=total;
+
+  const r=60, circ=2*Math.PI*r;
+  const fill=document.getElementById('ringFill');
+  fill.style.strokeDasharray=circ;
+  fill.style.strokeDashoffset=circ;
+  const color=pct>=70?'#22c55e':pct>=50?'#f59e0b':'#ef4444';
+  fill.style.stroke=color;
+  document.getElementById('ringPct').style.color=color;
+  setTimeout(()=>{ fill.style.strokeDashoffset=circ-(pct/100)*circ; },100);
+
+  let grade,msg;
+  if(pct>=90){grade='A+';msg='Outstanding performance! You have mastered this material.';}
+  else if(pct>=80){grade='A';msg='Excellent! Strong command of the concepts.';}
+  else if(pct>=70){grade='B';msg='Good work! A bit more review and you will excel.';}
+  else if(pct>=60){grade='C';msg='Fair. Review the wrong answers carefully.';}
+  else if(pct>=50){grade='D';msg='Needs improvement. Focus on the explanations.';}
+  else{grade='F';msg='Keep studying! Read each explanation and retry.';}
+
+  const gb=document.getElementById('gradeBadge');
+  gb.textContent=`Grade: ${grade}`;
+  gb.style.background=color+'22';
+  gb.style.color=color;
+  gb.style.border=`1.5px solid ${color}`;
+  document.getElementById('resMsg').textContent=msg;
+  document.getElementById('reviewList').style.display='none';
+}
+
+function showReview(){
+  const rl=document.getElementById('reviewList');
+  if(rl.style.display!=='none'){ rl.style.display='none'; return; }
+  rl.innerHTML='';
+  quizQuestions.forEach((q,i)=>{
+    const ua=userAnswers[i], correct=ua===q.a;
+    const div=document.createElement('div');
+    div.className=`rev-item ${correct?'c':'w'}`;
+    div.innerHTML=`<div class="rev-q">${i+1}. ${q.q}</div>
+    <div class="rev-ans">Your answer: <span style="color:${correct?'var(--correct)':'var(--wrong)'}">${ua>=0?q.o[ua]:'(unanswered)'}</span>
+    ${!correct?` | Correct: <span style="color:var(--correct)">${q.o[q.a]}</span>`:''}</div>`;
+    rl.appendChild(div);
+  });
+  rl.style.display='flex';
+  rl.scrollIntoView({behavior:'smooth'});
+}
+
+function restartSame(){
+  userAnswers=new Array(quizQuestions.length).fill(-1);
+  currentIdx=0; score=0;
+  // re-shuffle
+  for(let i=quizQuestions.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [quizQuestions[i],quizQuestions[j]]=[quizQuestions[j],quizQuestions[i]];
+  }
+  showScreen('quiz');
+  renderQuestion();
+}
+</script>
+</body>
+</html>
