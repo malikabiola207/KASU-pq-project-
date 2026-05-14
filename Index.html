@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BIO 101 Quiz — KASU PharmD</title>
+<style>
+  :root {
+    --green:#16a34a;--dgreen:#14532d;--light:#f0fdf4;--card:#fff;
+    --border:#bbf7d0;--accent:#15803d;--warn:#dc2626;--gold:#ca8a04;
+    --gray:#6b7280;--dark:#111827;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#064e3b 0%,#065f46 50%,#047857 100%);min-height:100vh;padding:16px}
+  h1{text-align:center;color:#fff;font-size:1.6rem;margin-bottom:4px;text-shadow:0 2px 8px #0008}
+  .subtitle{text-align:center;color:#a7f3d0;font-size:.85rem;margin-bottom:18px}
+  .card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 8px 32px #0004;max-width:780px;margin:0 auto}
+
+  /* SETUP SCREEN */
+  #setup h2{color:var(--dgreen);font-size:1.2rem;margin-bottom:14px;text-align:center}
+  .topic-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+  .topic-btn{background:var(--light);border:2px solid var(--border);border-radius:10px;padding:10px 12px;
+    cursor:pointer;font-size:.82rem;color:var(--dark);transition:.2s;text-align:left}
+  .topic-btn.active{background:#dcfce7;border-color:var(--green);color:var(--dgreen);font-weight:700}
+  .topic-btn:hover{border-color:var(--green)}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  label{font-size:.85rem;color:var(--gray);font-weight:600}
+  input[type=number]{width:80px;padding:7px 10px;border:2px solid var(--border);border-radius:8px;font-size:.9rem}
+  select{padding:7px 10px;border:2px solid var(--border);border-radius:8px;font-size:.85rem;background:#fff}
+  .btn{padding:11px 22px;border:none;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;transition:.2s}
+  .btn-green{background:var(--green);color:#fff}
+  .btn-green:hover{background:var(--dgreen)}
+  .btn-gray{background:#e5e7eb;color:#374151}
+  .btn-gray:hover{background:#d1d5db}
+  .btn-sm{padding:7px 15px;font-size:.82rem}
+  #qcount-info{font-size:.8rem;color:var(--gray);margin-top:4px}
+
+  /* QUIZ SCREEN */
+  #quiz{display:none}
+  .progress-bar{height:8px;background:#d1fae5;border-radius:99px;margin-bottom:16px;overflow:hidden}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--green),#10b981);border-radius:99px;transition:.4s}
+  .q-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px}
+  .q-num{font-size:.8rem;color:var(--gray);font-weight:600}
+  .timer-badge{background:var(--dgreen);color:#fff;border-radius:20px;padding:4px 12px;font-size:.82rem;font-weight:700}
+  .timer-badge.warn{background:var(--warn)}
+  .section-tag{background:#dcfce7;color:var(--dgreen);border-radius:6px;padding:2px 8px;font-size:.75rem;font-weight:700}
+  .q-text{font-size:.95rem;font-weight:700;color:var(--dark);margin-bottom:14px;line-height:1.5}
+  .options{display:grid;gap:9px}
+  .opt{display:flex;align-items:center;gap:10px;background:var(--light);border:2px solid var(--border);
+    border-radius:10px;padding:11px 14px;cursor:pointer;font-size:.88rem;color:var(--dark);transition:.2s}
+  .opt:hover:not(.locked){background:#dcfce7;border-color:var(--green)}
+  .opt.selected{background:#dcfce7;border-color:var(--green)}
+  .opt.correct{background:#dcfce7;border-color:#16a34a;font-weight:700}
+  .opt.wrong{background:#fee2e2;border-color:#dc2626}
+  .opt-letter{width:26px;height:26px;border-radius:50%;background:var(--green);color:#fff;
+    font-weight:700;font-size:.8rem;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .feedback{margin-top:12px;padding:10px 14px;border-radius:10px;font-size:.85rem;font-weight:600;display:none}
+  .feedback.correct{background:#dcfce7;color:var(--dgreen);display:block}
+  .feedback.wrong{background:#fee2e2;color:var(--warn);display:block}
+  .nav-row{display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:8px}
+  .skip-btn{background:none;border:2px solid var(--border);border-radius:8px;padding:7px 14px;
+    font-size:.82rem;color:var(--gray);cursor:pointer;font-weight:600}
+  .skip-btn:hover{border-color:var(--gray)}
+
+  /* RESULTS SCREEN */
+  #results{display:none}
+  .score-circle{width:120px;height:120px;border-radius:50%;margin:0 auto 16px;display:flex;
+    flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:2rem;
+    border:6px solid var(--green);color:var(--dgreen);background:var(--light)}
+  .score-circle small{font-size:.65rem;font-weight:600;color:var(--gray)}
+  .grade-badge{text-align:center;font-size:1.1rem;font-weight:700;margin-bottom:14px;padding:8px;
+    border-radius:10px;background:var(--light);color:var(--dgreen)}
+  .stat-row{display:flex;justify-content:space-around;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+  .stat{text-align:center;background:var(--light);border-radius:10px;padding:10px 16px;min-width:80px}
+  .stat .val{font-size:1.3rem;font-weight:800;color:var(--dgreen)}
+  .stat .lbl{font-size:.72rem;color:var(--gray);font-weight:600}
+  .review-item{border-left:4px solid var(--border);padding:10px 14px;margin-bottom:10px;
+    background:var(--light);border-radius:0 10px 10px 0;font-size:.83rem}
+  .review-item.r-correct{border-color:var(--green)}
+  .review-item.r-wrong{border-color:var(--warn)}
+  .review-q{font-weight:700;color:var(--dark);margin-bottom:4px}
+  .review-ans{color:var(--gray)}
+  .review-ans span.ok{color:var(--green);font-weight:700}
+  .review-ans span.bad{color:var(--warn);font-weight:700}
+  #review-toggle{cursor:pointer;color:var(--green);font-size:.85rem;font-weight:700;
+    background:none;border:none;text-decoration:underline;margin-bottom:10px}
+  @media(max-width:500px){.topic-grid{grid-template-columns:1fr}.row{gap:6px}}
+</style>
+</head>
+<body>
+<h1>🌿 BIO 101 Interactive Quiz</h1>
+<p class="subtitle">KASU PharmD · First Year · Comprehensive Exam Practice</p>
+
+<!-- SETUP -->
+<div class="card" id="setup">
+  <h2>⚙️ Configure Your Quiz Session</h2>
+  <label style="display:block;margin-bottom:8px;font-size:.88rem;color:var(--dgreen);font-weight:700">📚 Select Topic(s):</label>
+  <div class="topic-grid" id="topic-grid"></div>
+
+  <div class="row" style="margin-top:4px">
+    <label>❓ No. of Questions:</label>
+    <input type="number" id="qcount" min="1" value="20">
+    <label>⏱ Timer per Q:</label>
+    <select id="timer-sel">
+      <option value="0">No Timer</option>
+      <option value="30">30 sec</option>
+      <option value="45" selected>45 sec</option>
+      <option value="60">60 sec</option>
+      <option value="90">90 sec</option>
+    </select>
+  </div>
+  <div id="qcount-info"></div>
+  <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn btn-green" onclick="startQuiz()">🚀 Start Quiz</button>
+    <button class="btn btn-gray btn-sm" onclick="selectAll()">Select All Topics</button>
+    <button class="btn btn-gray btn-sm" onclick="deselectAll()">Clear Selection</button>
+  </div>
+</div>
+
+<!-- QUIZ -->
+<div class="card" id="quiz">
+  <div class="progress-bar"><div class="progress-fill" id="prog"></div></div>
+  <div class="q-header">
+    <span class="q-num" id="qnum"></span>
+    <span class="section-tag" id="sec-tag"></span>
+    <span class="timer-badge" id="timer-badge" style="display:none">⏱ --</span>
+  </div>
+  <div class="q-text" id="qtext"></div>
+  <div class="options" id="opts"></div>
+  <div class="feedback" id="feedback"></div>
+  <div class="nav-row">
+    <button class="skip-btn" onclick="skipQ()">⏭ Skip</button>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-gray btn-sm" id="prev-btn" onclick="prevQ()">◀ Prev</button>
+      <button class="btn btn-green" id="next-btn" onclick="nextQ()">Next ▶</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="card" id="results">
+  <h2 style="text-align:center;color:var(--dgreen);margin-bottom:14px">📊 Quiz Results</h2>
+  <div class="score-circle" id="score-circle"></div>
+  <div class="grade-badge" id="grade-badge"></div>
+  <div class="stat-row" id="stat-row"></div>
+  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:16px">
+    <button class="btn btn-green" onclick="retryQuiz()">🔁 Retry Same Questions</button>
+    <button class="btn btn-gray" onclick="goSetup()">🏠 New Quiz</button>
+  </div>
+  <button id="review-toggle" onclick="toggleReview()">📝 Show Answer Review</button>
+  <div id="review-list" style="display:none"></div>
+</div>
+
+<script>
+const ALL_QS = [
+  // ===== GENETICS & HEREDITY =====
+  {s:"Genetics & Heredity",q:"Another name for Heredity is…",opts:["Inheritance","Variation","Reproduction","Genes"],a:0},
+  {s:"Genetics & Heredity",q:"Gregor Mendel's hybridization experiment formed the basis for the inheritance of ______ in living organisms.",opts:["Traits","Colour","Height","Dominance"],a:0},
+  {s:"Genetics & Heredity",q:"The complete masking of a recessive allele by the dominant allele in the F1 generation is best explained by which law?",opts:["Law of Dominance","Law of Independent Assortment","Law of Segregation","Incomplete Dominance"],a:0},
+  {s:"Genetics & Heredity",q:"Which genotypic percentage best explains the Law of Segregation in the F2 generation?",opts:["25%, 50%, 25%","75%, 25%","10%, 80%, 10%","25%, 75%"],a:0},
+  {s:"Genetics & Heredity",q:"Which phenotypic percentage best explains the Law of Segregation in the F2 generation?",opts:["75%, 25%","25%, 50%, 25%","15%, 15%, 70%","50%, 50%"],a:0},
+  {s:"Genetics & Heredity",q:"Another name for Incomplete Dominance is:",opts:["Intermediate Inheritance","Segregation","Independent Assortment","Principle of Uniformity"],a:0},
+  {s:"Genetics & Heredity",q:"Incomplete Dominance is an exception to which Mendelian law?",opts:["Law of Dominance and Law of Segregation","Law of Independent Assortment","None of the above","All of the above"],a:0},
+  {s:"Genetics & Heredity",q:"A dihybrid cross in Mendelian genetics refers to:",opts:["A cross between two plants which have two pairs of contrasting characters","A cross between two plants which have only one pair of contrasting character","None of the above","All of the above"],a:0},
+  {s:"Genetics & Heredity",q:"Law of Independent Assortment explains how alleles of different genes are segregated independently during which stage of meiosis?",opts:["Metaphase and Anaphase","Interphase","Telophase","Alleles stay together"],a:0},
+  {s:"Genetics & Heredity",q:"Which of the following best describes an allele?",opts:["Variants of the same gene","Two totally different genes","Chromosome with aberration","A defective gene"],a:0},
+  {s:"Genetics & Heredity",q:"Define a monohybrid cross:",opts:["A cross between two plants that entails only one pair of contrasting character","A cross between two plants which have two pairs of contrasting characters","All of the above","None of the above"],a:0},
+  {s:"Genetics & Heredity",q:"Which best explains a homozygous dominant allelic situation?",opts:["RR","rr","Rr","rR"],a:0},
+  {s:"Genetics & Heredity",q:"If two pure breed parents for a particular trait are crossed, the F1 generation phenotype of all offspring will be that of the parent showing…",opts:["Dominant trait","Recessive trait","None of the above","All of the above"],a:0},
+  {s:"Genetics & Heredity",q:"Which best explains a homozygous recessive allelic situation?",opts:["rr","RR","Rr","rR"],a:0},
+  {s:"Genetics & Heredity",q:"Which best explains a heterozygous allelic situation?",opts:["Rr","rr","RR","rrrr"],a:0},
+  {s:"Genetics & Heredity",q:"Which phenotypic percentage represents F2 generation in incomplete dominance?",opts:["25%, 50%, 25%","75%, 25%","25%, 75%","100%"],a:0},
+  {s:"Genetics & Heredity",q:"Which statement is true for intermediate or partial inheritance?",opts:["More than 2 phenotypes are achievable in the F2 generation","Only 1 phenotype is achievable in F2","Only 1 genotype is achievable in F2","Results of F1 generation same as law of dominance"],a:0},
+  {s:"Genetics & Heredity",q:"When one allele masks another, the masked allele is referred to as:",opts:["Recessive allele","Dominant allele","Heterozygous allele","Heterozygous gene"],a:0},
+  {s:"Genetics & Heredity",q:"Which of the following statements is true about variation?",opts:["All of the above","Variation can be caused by positive gene mutation","Variation can be caused by interaction of genes and environment","Variation can lead to evolution of species"],a:0},
+  {s:"Genetics & Heredity",q:"Another name for the Law of Dominance is:",opts:["Law of Uniformity","Law of Segregation","Law of Independent Assortment","None of the above"],a:0},
+  {s:"Genetics & Heredity",q:"The genotypic percentages of F2 generation in intermediate inheritance is:",opts:["25%, 50%, 25%","75%, 25%","25%, 75%","100%"],a:0},
+  {s:"Genetics & Heredity",q:"The ratio 9:3:3:1 explains the outcome of which Mendelian law?",opts:["Law of Independent Assortment","Law of Segregation","Law of Dominance","Law of Uniformity"],a:0},
+  {s:"Genetics & Heredity",q:"The process where traits hidden in F1 reappear in F2 to resemble P generation is expressed in which law?",opts:["Law of Segregation","Law of Independent Assortment","Law of Uniformity","All of the above"],a:0},
+  {s:"Genetics & Heredity",q:"Which statement is true for F1 generation in the Law of Dominance?",opts:["Crossing a white and purple pea plant gave F1 plants that were all purple","Crossing gave F1 plants that were pink","Crossing gave F1 plants that were red","Crossing gave F1 plants with recessive white colour"],a:0},
+  {s:"Genetics & Heredity",q:"Which best explains the Law of Independent Assortment?",opts:["Alleles of different genes do not stay together during gamete formation","Alleles stay together during gamete formation","Both options are correct","None of the options is true"],a:0},
+  {s:"Genetics & Heredity",q:"Which illustration explains the P generation of a dihybrid cross?",opts:["YYRR x yyrr","YYyy x RRrr","RRrr x YYyy","RRRR x yyyy"],a:0},
+  {s:"Genetics & Heredity",q:"What will be the phenotype of pea seeds with alleles YyRR? (Y=Yellow, y=Green, R=Round, r=Wrinkled)",opts:["Yellow and Round","Green and Round","Yellow and Wrinkled","Green and Wrinkled"],a:0},
+  {s:"Genetics & Heredity",q:"What will be the phenotype of pea seeds with alleles Yyrr? (Y=Yellow, y=Green, R=Round, r=Wrinkled)",opts:["Yellow and Wrinkled","Yellow and Round","Green and Wrinkled","Green and Round"],a:0},
+  {s:"Genetics & Heredity",q:"What are the possible gametes formed if alleles are transmitted independently from F1 RrYy?",opts:["YR, yR, Yr, yr","rr, yy, YY, RR","RY, ry","Rr, Yy"],a:0},
+  {s:"Genetics & Heredity",q:"What are the possible gametes formed if alleles are transmitted together from F1 RrYy?",opts:["RY, ry","YR, yR, Yr, yr","rr, yy, YY, RR","Rr, Yy"],a:0},
+  {s:"Genetics & Heredity",q:"Which scientist first noticed incomplete dominance in a plant species?",opts:["Carl Correns","Linnaeus","Mendel","Charles Darwin"],a:0},
+  {s:"Genetics & Heredity",q:"Incomplete dominance was first observed in which plant?",opts:["Mirabilis jalapa","The pea plant","The neem plant","None of the above"],a:0},
+  {s:"Genetics & Heredity",q:"What is the similarity between Law of Segregation and Incomplete Dominance?",opts:["The genotypic ratio is the same for F2 generation","The phenotypic ratio is same for F2 generation","Recessive allele expressions are completely masked","All of the above"],a:0},
+  {s:"Genetics & Heredity",q:"The physical appearance of an organism is called:",opts:["Phenotype","Genotype","Alleles","Genes"],a:0},
+  {s:"Genetics & Heredity",q:"Independent assortment explains that:",opts:["Alleles independently sort during gamete formation","Transfer of one allele is dependent on another","There is only one gene with 2 alleles","All of the above"],a:0},
+
+  // ===== ECOLOGY =====
+  {s:"Ecology",q:"The association where an organism kills and eats another is called:",opts:["Predator-Prey relationship","Predator relationship","Prey relationship","Pedestrian relationship"],a:0},
+  {s:"Ecology",q:"Parasites obtain food from:",opts:["Hosts","Preys","Predators","Species"],a:0},
+  {s:"Ecology",q:"The organism that kills another to eat it is called a:",opts:["Predator","Prey","Parasite","Pandemic"],a:0},
+  {s:"Ecology",q:"The association between a host and parasites is:",opts:["Parasitism","Saprophytism","Commensalism","Mutualism"],a:0},
+  {s:"Ecology",q:"Association between algae and fungi is an example of:",opts:["Mutualism","Parasitism","Predation","Commensalism"],a:0},
+  {s:"Ecology",q:"Competition between members of the same species is ______ competition.",opts:["Intraspecific","Interspecific","Inspecific","Dispecific"],a:0},
+  {s:"Ecology",q:"The relationship where an organism destroys another but does not benefit from the dead is:",opts:["Amensalism","Mutualism","Commensalism","Saprophytism"],a:0},
+  {s:"Ecology",q:"An ______ may be small or large.",opts:["Ecosystem","Ecology","Ecological studies","Environment"],a:0},
+  {s:"Ecology",q:"A group of organisms sharing the same environment with certain distinctive unity is called a:",opts:["Community","Habitat","Biosphere","Harmony"],a:0},
+  {s:"Ecology",q:"An interbreeding group of organisms of the same species sharing a particular space is called:",opts:["Population","Community","Habitat","Ecosystem"],a:0},
+  {s:"Ecology",q:"______ is the lowest level of organisation within the biosphere.",opts:["Organism","Organisation","Organic matter","Organ"],a:0},
+  {s:"Ecology",q:"Various ecosystems form the:",opts:["Biosphere","Biological population","Organisation","Community"],a:0},
+  {s:"Ecology",q:"The non-living factor of the ecosystem is referred to as the ______ component.",opts:["Abiotic","Biotic","Active","Non-active"],a:0},
+  {s:"Ecology",q:"______ are autotrophic organisms.",opts:["Producers","Consumers","Decomposers","Herbivores"],a:0},
+  {s:"Ecology",q:"______ are heterotrophic organisms.",opts:["Consumers","Producers","Herbivores","Omnivores"],a:0},
+  {s:"Ecology",q:"______ are unable to synthesize organic food molecules from inorganic molecules.",opts:["Heterotrophs","Herbivores","Autotrophs","Detritivores"],a:0},
+  {s:"Ecology",q:"Animals that obtain food exclusively from plants are:",opts:["Herbivores","Detritivores","Omnivores","Carnivores"],a:0},
+  {s:"Ecology",q:"Traditionally, food chains are drawn with producers at the:",opts:["Bottom","Top","Middle","Any position"],a:0},
+  {s:"Ecology",q:"______ is the number of energy levels transferred from original solar energy entering an ecosystem.",opts:["Trophic level","Energy level","Stepwise level","Chemical level"],a:0},
+  {s:"Ecology",q:"When one organism eats another, energy is:",opts:["Transferred","Destroyed","Created","Made"],a:0},
+  {s:"Ecology",q:"A place where an organism lives is called:",opts:["Habitat","Dwelling","Habitation","Habit"],a:0},
+  {s:"Ecology",q:"A portion of dry land occupied by living organisms is ______ habitat.",opts:["Terrestrial","Desert","Savannah","Sahel Savannah"],a:0},
+  {s:"Ecology",q:"______ are tropical grasslands often with scattered trees.",opts:["Savannahs","Rain forests","Deserts","Sahel savannahs"],a:0},
+  {s:"Ecology",q:"Tropical rainforests are found in:",opts:["South and Central America","North America","Europe","Asia only"],a:0},
+  {s:"Ecology",q:"Deserts are found throughout the world mostly in the:",opts:["Subtropical zones","Tropical zones","Temperate zones","Polar zones"],a:0},
+  {s:"Ecology",q:"Animals such as camels are found in the:",opts:["Deserts","Savannahs","Sahel savannahs","Tropical rainforests"],a:0},
+  {s:"Ecology",q:"______ occurs around the world in the littoral belt.",opts:["Marine sandy beach","Shelf benthos","Continental benthos","Marine beach"],a:0},
+  {s:"Ecology",q:"Birds, invertebrates, and plants like lilies are found in:",opts:["Lakes","Ponds","Fresh water","Marine"],a:0},
+  {s:"Ecology",q:"The Amazon is the best example of:",opts:["Tropical freshwater swamp forests","Tropical forests","Freshwater forests","Swamp forests"],a:0},
+  {s:"Ecology",q:"Which of the following is an arboreal organism?",opts:["Bird","Elephant","Wildebeest","Bryophyllum"],a:0},
+  {s:"Ecology",q:"The amount of water in plant tissues is primarily determined by the balance of:",opts:["Root absorption and transpiration","Runoff and root absorption","Respiration and photosynthesis","Precipitation and photosynthesis"],a:0},
+  {s:"Ecology",q:"Which pathway directly leads to transfer of useful energy?",opts:["Energy moves to higher level in a food chain","Energy lost by conduction to other objects","Energy passed to decomposers and parasites","Heat energy to environment"],a:0},
+  {s:"Ecology",q:"Soil micro-organisms are beneficial because of their involvement in:",opts:["Cycling of nutrients","Respiration","Photosynthesis","Translocation"],a:0},
+  {s:"Ecology",q:"The mode of nutrition in which digestion is extracellular is:",opts:["Saprophytic","Parasitic","Holophytic","Holozoic"],a:0},
+  {s:"Ecology",q:"The first product of photosynthesis is:",opts:["Hydroxyl ion","Starch","Oxygen","Carbon dioxide"],a:0},
+  {s:"Ecology",q:"An organism's activity that affects another's survival in the same habitat is a:",opts:["Biotic factor","Edaphic factor","Physiological factor","Abiotic factor"],a:0},
+  {s:"Ecology",q:"The average number of individuals per unit area of the habitat is called:",opts:["Population density","Population size","Population number","Total population"],a:0},
+  {s:"Ecology",q:"Loss of soil through erosion can be reduced by:",opts:["Crop rotation","Soil mulching","Soil precipitation","Gully erosion"],a:0},
+  {s:"Ecology",q:"The adaptive importance of nuptial flight in termite colonies is to:",opts:["Ensure continuity","Expel reproductives","Cross breeding","Provide proteins for birds and mammals"],a:0},
+  {s:"Ecology",q:"Which instrument is used to measure Relative Humidity?",opts:["Hygrometer","Hydrometer","Anemometer","Relative Potentiometer"],a:0},
+  {s:"Ecology",q:"In which Biome does south-western Nigeria occur?",opts:["Tropical Rainforest","Temperate Rainforest","Typical forest","Deciduous forest"],a:0},
+  {s:"Ecology",q:"Plants that grow in drought-prone areas are termed:",opts:["Xerophytes","Mesophytes","Hydrophytes","Dryopteris"],a:0},
+  {s:"Ecology",q:"Proboscis structures are found in:",opts:["Insects","Elephants","Fishes","Plants"],a:0},
+  {s:"Ecology",q:"Which pollutant is biodegradable?",opts:["Sewage","Crude oil","Metals","Chemical pesticides"],a:0},
+  {s:"Ecology",q:"The following are methods of measuring plant growth EXCEPT:",opts:["Counting the number of fruits produced","Determining fresh and dry weights","Measuring increase in height of shoot","Measuring length and breadth of a leaf"],a:0},
+  {s:"Ecology",q:"An example of a parasitic plant is:",opts:["Mistletoe","Epiphytes","Xerophytes","Cactus"],a:0},
+  {s:"Ecology",q:"Which is NOT associated with ecological succession?",opts:["Evergreens","Climax community","New habitat","Pioneer plants"],a:0},
+  {s:"Ecology",q:"The resemblance of a palatable insect to a poisonous insect is an example of:",opts:["Mimicry","Camouflage","Pheromones","Shadowtyping"],a:0},
+  {s:"Ecology",q:"A moss plant can withstand drought by means of its:",opts:["Spores","Rhizoids","Archegonia","Antheridium"],a:0},
+  {s:"Ecology",q:"Which of the following is a Greenhouse gas EXCEPT:",opts:["Oxygen","Carbon monoxide","Chlorofluorocarbon","Methane"],a:0},
+  {s:"Ecology",q:"An endangered species is most vulnerable to extinction when it has:",opts:["Small amount of genetic diversity","Large variety in its diet","High birthrate","Small amount of competition"],a:0},
+  {s:"Ecology",q:"Nitrogen in the atmosphere cannot be used by plants unless it goes through:",opts:["Nitrogen fixation","Photosynthesis","Transpiration","Nitrogen decomposition"],a:0},
+  {s:"Ecology",q:"The sum total of all limiting factors affecting a population is known as:",opts:["Equilibrium","Balance in Nature","Population structure","Abiotic factors"],a:0},
+  {s:"Ecology",q:"Both consumers and decomposers are called:",opts:["Autotrophs","Heterotrophs","Herbivores","Producers"],a:0},
+  {s:"Ecology",q:"______ illustrates a linear step-by-step series of who eats whom in an ecosystem.",opts:["Food chains","Food webs","Energy flow","Energy transfer"],a:0},
+  {s:"Ecology",q:"______ is a place where an organism lives and adapts.",opts:["Habitat","Ecosystem","Hydrosphere","Biosphere"],a:0},
+  {s:"Ecology",q:"______ describes a relationship in which two species live closely together.",opts:["Symbiosis","Mitosis","Meiosis","Photolysis"],a:0},
+  {s:"Ecology",q:"De Bary coined the term symbiosis in the year:",opts:["1879","1979","1897","1969"],a:0},
+  {s:"Ecology",q:"______ is an animal that kills and eats other organisms.",opts:["Predator","Carnivore","Detritivore","Prey"],a:0},
+  {s:"Ecology",q:"______ is an animal that is killed and eaten by another organism.",opts:["Prey","Predator","Parasite","Omnivore"],a:0},
+  {s:"Ecology",q:"The association between hedgehog and African elephant is best described as:",opts:["Neutralism","Mutualism","Cooperation","Symbiosis"],a:0},
+  {s:"Ecology",q:"The association between Plasmodium and man is:",opts:["Parasitism","Predatory","Cooperation","Amensalism"],a:0},
+  {s:"Ecology",q:"Surroundings in which living organisms live are termed their:",opts:["Environment","Spaces","Places","Spheres"],a:0},
+  {s:"Ecology",q:"Any region on earth that supports the existence of living organisms is called:",opts:["Biosphere","Lithosphere","Hydrosphere","Atmosphere"],a:0},
+
+  // ===== CELL BIOLOGY =====
+  {s:"Cell Biology",q:"The hypothalami are located at the base of:",opts:["Thalami","Forebrain","Medulla oblongata","Skull"],a:0},
+  {s:"Cell Biology",q:"Control of homeostasis in the body is accomplished by:",opts:["Nervous and Endocrine systems","Homostatus","Homeo metabolism","Poikilothermic"],a:0},
+  {s:"Cell Biology",q:"Somatic cells of the body contain:",opts:["46 chromosomes","26 chromosomes","10 chromosomes","100 chromosomes"],a:0},
+  {s:"Cell Biology",q:"The Nephridia is an example of:",opts:["Kidney","Heart","Lungs","Brain insect"],a:0},
+  {s:"Cell Biology",q:"A hormone which tones up the muscles of a person in times of danger is from the:",opts:["Adrenal gland","Brain cerebrum","Thyroid gland","Elbow muscles"],a:0},
+  {s:"Cell Biology",q:"The total net gain of energy during anaerobic respiration of one molecule of glucose is:",opts:["2 ATP","36 ATP","38 ATP","10 ATP"],a:0},
+  {s:"Cell Biology",q:"This structure of the plant cell is non-living:",opts:["Cell wall","Cytoplasm","Nucleus","Mitochondrion"],a:0},
+  {s:"Cell Biology",q:"This cell organelle does NOT contain DNA:",opts:["Lysosomes","Mitochondria","Nucleus","Chloroplast"],a:0},
+  {s:"Cell Biology",q:"The organelle serving as a primary packaging area for molecules distributed throughout the cell is:",opts:["Golgi apparatus","Vacuole","Plastids","Mitochondria"],a:0},
+  {s:"Cell Biology",q:"Animal cells are interconnected by:",opts:["Desmosomes","Plasma membrane","Cell wall","Plasmodesmata"],a:0},
+  {s:"Cell Biology",q:"The cell theory is NOT applicable to:",opts:["Virus","Fungi","Algae","Microbes"],a:0},
+  {s:"Cell Biology",q:"Nucleoproteins are synthesized on:",opts:["Nucleolus","Cytoplasm","Nuclear envelope","Nucleoplasm"],a:0},
+  {s:"Cell Biology",q:"Lysosomes are rich in:",opts:["Hydrolytic enzymes","Nucleic acids","Hormones","Carbohydrates"],a:0},
+  {s:"Cell Biology",q:"Microtubules are absent in:",opts:["Mitochondria","Flagella","Centrioles","Spindle fibres"],a:0},
+  {s:"Cell Biology",q:"Cell wall shows:",opts:["Complete permeability","Semi-permeability","Differential permeability","Impermeability"],a:0},
+  {s:"Cell Biology",q:"Plasma membrane is made of:",opts:["Proteins, lipids and carbohydrates","Proteins and lipids","Proteins, nucleic acids and lipids","Proteins and carbohydrates"],a:0},
+  {s:"Cell Biology",q:"Which organelle has a single membrane?",opts:["Spherosomes","Mitochondria","Nucleus","Chloroplast"],a:0},
+  {s:"Cell Biology",q:"Which sentence is NOT correct about organelles?",opts:["They are found in multicellular organisms only","They are found in all eukaryotic cells","They coordinate to produce the cell","They are small sized and mostly internal"],a:0},
+  {s:"Cell Biology",q:"Which organism contains a single chromosome and divides through fission or budding?",opts:["Prokaryotes","Eukaryotes","Bacteria","Primitive organisms"],a:0},
+  {s:"Cell Biology",q:"The percentage amount of integral protein of plasma membrane is:",opts:["70%","40%","60%","50%"],a:0},
+  {s:"Cell Biology",q:"Oligosaccharides are usually attached to the extrinsic phase of plasma membrane by:",opts:["Both proteins and lipids","Proteins only","Lipids only","Not specific"],a:0},
+  {s:"Cell Biology",q:"The internal skeleton of a cell is composed of:",opts:["Microtubules, intermediate filaments and microfilaments","Cellulose and intermediate filaments","Cellulose, microtubules and centrioles","Microfilaments only"],a:0},
+  {s:"Cell Biology",q:"Types of lipid generally contained in biomembranes are:",opts:["All of these (lecithin, cephalin, cholesterol)","Lecithin only","Cephalin only","Cholesterol only"],a:0},
+  {s:"Cell Biology",q:"Which organelle lacks the property of self-replication?",opts:["Ribosome","Centrioles","Mitochondria","Plastid"],a:0},
+  {s:"Cell Biology",q:"Which cellular organelle functions in ribosome synthesis?",opts:["Nucleolus","Endoplasmic reticulum","Nucleus","Golgi bodies"],a:0},
+  {s:"Cell Biology",q:"The centriole/centromere takes part in:",opts:["Spindle formation","Cell plate formation","Nucleus formation","Start of cell division"],a:0},
+  {s:"Cell Biology",q:"Which of the following shows selective permeability?",opts:["Cell membrane","Cytoplasm","Cell wall","Protoplasm"],a:0},
+  {s:"Cell Biology",q:"Granules of nucleolus are precursors of:",opts:["Ribosome","RNA","Lysosomes","Chromosome"],a:0},
+  {s:"Cell Biology",q:"Photophosphorylation occurs in:",opts:["Plastids","Mitochondria","Cytoplasm","Cell membrane"],a:0},
+  {s:"Cell Biology",q:"In the plasma membrane, the functional as well as structural role is played by:",opts:["Proteins","Lipids","Cholesterol","Oligosaccharides"],a:0},
+  {s:"Cell Biology",q:"Which would NOT be considered part of cell cytoplasm?",opts:["The nucleus","A ribosome","A mitochondrion","A microtubule"],a:0},
+  {s:"Cell Biology",q:"Which cell organelle is devoid of DNA?",opts:["Ribosome","Nucleus","Plastid","Mitochondria"],a:0},
+  {s:"Cell Biology",q:"Another name for ribosome is:",opts:["Microsome","RNA particle","Dictyosome","Oxisome"],a:0},
+  {s:"Cell Biology",q:"Organelle found in both prokaryotes and eukaryotes:",opts:["Ribosome","Mitochondria","Nucleoli","Plastids"],a:0},
+  {s:"Cell Biology",q:"The smallest cell of the human body is:",opts:["RBC","WBC","Nerve cell","Egg cell"],a:0},
+  {s:"Cell Biology",q:"In a typical eukaryotic cell, the region between nucleus and plasma membrane is known as:",opts:["Cytoplasm","Lumen","Karyoplasm","Nucleoplasm"],a:0},
+
+  // ===== TAXONOMY =====
+  {s:"Taxonomy",q:"The type of classification based solely on observable characteristics without assumption about evolution is:",opts:["Phenetic","Systematics","Phylogenetics","Natural"],a:0},
+  {s:"Taxonomy",q:"Which of the following is a proper way to write a scientific name in taxonomy?",opts:["Homo sapiens","Homo Sapiens","HOMO SAPIENS","homo sapiens"],a:0},
+  {s:"Taxonomy",q:"The binomial system was devised by the Swedish scientist:",opts:["Carl Linnaeus","Robert Hooke","Thomas H. Morgan","Gregor Mendel"],a:0},
+  {s:"Taxonomy",q:"The science of taxonomy has two branches. These are:",opts:["Nomenclature and Systematics","Kingdom and Phylum","Phenetic and Phylogenetic","Evolution and Biochemistry"],a:0},
+  {s:"Taxonomy",q:"Natural classification is based on the following EXCEPT:",opts:["Biostatistics","Embryology","Anatomy","Cell structure"],a:0},
+  {s:"Taxonomy",q:"If two organisms are in the same phylum, they must also be in the same:",opts:["Kingdom","Species","Class","Family"],a:0},
+  {s:"Taxonomy",q:"Which taxonomic group would contain the LARGEST number of organisms?",opts:["Phylum","Class","Family","Order"],a:0},
+  {s:"Taxonomy",q:"______ is the branch of taxonomy that deals with the naming of organisms.",opts:["Nomenclature","Systematics","Hierarchy","Naming"],a:0},
+  {s:"Taxonomy",q:"Grouping fish into freshwater, brackish water and marine fish is an example of ______ classification.",opts:["Artificial","Phylogenetic","Natural","Phenetic"],a:0},
+  {s:"Taxonomy",q:"In the binomial system, each organism has two Latin names which are:",opts:["Generic name and specific name","Phylum and generic name","Family name and species","Kingdom and phylum"],a:0},
+  {s:"Taxonomy",q:"The science of classification is also known as:",opts:["Taxonomy","Nomenclature","Systematics","Hierarchy"],a:0},
+  {s:"Taxonomy",q:"Each taxon possesses features unique to that group known as:",opts:["Diagnostic feature","Unique feature","Common character","Shared feature"],a:0},
+  {s:"Taxonomy",q:"Two organisms are said to belong to the same species if they:",opts:["Can mate and produce offspring who can also reproduce","Look alike and can mate","Live in the same environment","Look alike"],a:0},
+  {s:"Taxonomy",q:"In phylogenetic classification, organisms belonging to the same group are believed to have a:",opts:["Common ancestor","Common parent","Unique feature","The same character"],a:0},
+  {s:"Taxonomy",q:"______ branch of taxonomy operates on the basis of similarities and differences.",opts:["Systematics","Nomenclature","Phenetic","Evolution"],a:0},
+  {s:"Taxonomy",q:"______ classification is one based on evolutionary relationships among organisms.",opts:["Phylogenetic","Phenetic","Hierarchical system","Artificial"],a:0},
+
+  // ===== REPRODUCTION & LIFE PROCESSES =====
+  {s:"Reproduction & Life Processes",q:"The process by which living organisms multiply in number is called:",opts:["Reproduction","Mutation","Division","Growth"],a:0},
+  {s:"Reproduction & Life Processes",q:"______ is the act of giving birth to young ones alive.",opts:["Reproduction","Multiplication","Birth","Multiple growth"],a:0},
+  {s:"Reproduction & Life Processes",q:"The two main types of reproduction are:",opts:["Sexual and Asexual","Fission and Budding","Binary and multiple fission","All of above"],a:0},
+  {s:"Reproduction & Life Processes",q:"A process that involves only one parent giving rise to a new offspring is called:",opts:["Asexual reproduction","Fragmentation","Sexual reproduction","Multiple division"],a:0},
+  {s:"Reproduction & Life Processes",q:"What happens during gamete formation in sexually reproducing organisms?",opts:["Meiosis","Mitosis","Binary fission","Multiple fission"],a:0},
+  {s:"Reproduction & Life Processes",q:"Asexual reproduction involves which of the following?",opts:["No variation among offspring","There is mixing of genetic characters","Variation among members","Exchange of chromosome numbers"],a:0},
+  {s:"Reproduction & Life Processes",q:"Which is referred to as a rapid process of multiplication?",opts:["Asexual reproduction","Sexual reproduction","Conjugation","Meiotic cell division"],a:0},
+  {s:"Reproduction & Life Processes",q:"Which of the following is NOT a type of asexual reproduction?",opts:["Fusion","Fission","Budding","Spore formation"],a:0},
+  {s:"Reproduction & Life Processes",q:"The process where only two organisms are produced from one parent is called:",opts:["Binary fission","Multiple fission","Multiple fusion","Binary fusion"],a:0},
+  {s:"Reproduction & Life Processes",q:"Sporulation is a method of reproduction involving a structure called:",opts:["Spore","Hyphae","Mycelium","Gamete"],a:0},
+  {s:"Reproduction & Life Processes",q:"Which is a characteristic of spores?",opts:["Very small and light","Large and light","Few in number","Dispersed by water only"],a:0},
+  {s:"Reproduction & Life Processes",q:"Method of reproduction found in Hydra is called:",opts:["Budding","Binary fission","Fragmentation","Spore formation"],a:0},
+  {s:"Reproduction & Life Processes",q:"Possession of a hard resistant wall that withstands adverse conditions is a feature of:",opts:["Spores","Gametes","Both gametes and spores","Neither"],a:0},
+  {s:"Reproduction & Life Processes",q:"Which is regarded as the spore found in fungi?",opts:["All of the above (conidiospore, zoospore, etc.)","Conidiospore only","Zoospore only","None of the above"],a:0},
+  {s:"Reproduction & Life Processes",q:"A cell with 12 pairs of chromosomes undergoes meiosis. How many chromosomes will each daughter cell contain?",opts:["12","24","4","6"],a:0},
+  {s:"Reproduction & Life Processes",q:"The part of a flower that provides protection to the immature flower is called:",opts:["Calyx","Petals","Stamen","Corolla"],a:0},
+  {s:"Reproduction & Life Processes",q:"Asexual reproduction in Amoeba is by:",opts:["Binary fission","Multiple fission","Budding","Conjugation"],a:0},
+  {s:"Reproduction & Life Processes",q:"In flowering plants, fertilized ovules become:",opts:["Fruits and seeds","Fruits only","Seeds only","Pollen grains"],a:0},
+  {s:"Reproduction & Life Processes",q:"What is the organ of sexual reproduction in angiosperms?",opts:["Flower","Leaf","Stem","Root"],a:0},
+  {s:"Reproduction & Life Processes",q:"In higher plants, flowers develop from a special structure called:",opts:["Flower-bud","Flower cells","Flower organ","Flower tissues"],a:0},
+  {s:"Reproduction & Life Processes",q:"In flowering plants, flowers are colorful in order to:",opts:["Attract insects","Ensure fertilization","Produce chemicals","Attract light energy"],a:0},
+  {s:"Reproduction & Life Processes",q:"The union of non-identical gametes is referred to as:",opts:["Heterogamous","Isogamous","Heterogasticus","Homogenous"],a:0},
+  {s:"Reproduction & Life Processes",q:"An organism that produces two separate gametes is called:",opts:["Unisexual","Hermaphrodite","Homosexual","Heterosexual"],a:0},
+  {s:"Reproduction & Life Processes",q:"One disadvantage of asexual reproduction is:",opts:["No variation among offspring formed","Offspring are not identical","Fresh potentiality","Mixing of genetic characters"],a:0},
+  {s:"Reproduction & Life Processes",q:"The word 'Angiosperm' simply means:",opts:["Flowering plant","Flowerless plant","Vascular plant","None of the above"],a:0},
+  {s:"Reproduction & Life Processes",q:"There are ______ characteristics that make living organisms exceptional.",opts:["Seven","Six","Five","Eight"],a:0},
+  {s:"Reproduction & Life Processes",q:"The release of energy from food in all living cells is called:",opts:["Respiration","Nutrition","Excretion","Reproduction"],a:0},
+  {s:"Reproduction & Life Processes",q:"Reproduction is the ability of living organisms to:",opts:["Produce new offspring","Produce pre-existing cells","All of the above","None of the above"],a:0},
+  {s:"Reproduction & Life Processes",q:"Growth is the permanent increase in ______ and ______.",opts:["Cell number and size","Cell number and width","Cell number and length","Cell number and area"],a:0},
+  {s:"Reproduction & Life Processes",q:"Sensitivity is also called:",opts:["Irritability","Respiration","Nutrition","Excretion"],a:0},
+
+  // ===== EVOLUTION =====
+  {s:"Evolution",q:"______ postulated the theory of natural selection.",opts:["Charles Darwin","Lamarck","Mendel","None"],a:0},
+  {s:"Evolution",q:"Competition between organisms of the same species is referred to as:",opts:["Intraspecific","Interspecific","Extra specific","Endo specific"],a:0},
+  {s:"Evolution",q:"______ is the law of nature.",opts:["Competition","Selection","Variation","Mutation"],a:0},
+  {s:"Evolution",q:"Lamarck postulated his evolution theory in the year:",opts:["1809","1920","1550","1790"],a:0},
+  {s:"Evolution",q:"Production of new organs results from:",opts:["New need","Alleles","DNA","Organisms"],a:0},
+  {s:"Evolution",q:"Cannibalism is another example of ______ competition.",opts:["Intraspecific","Interspecific","Extraspecific","Endospecific"],a:0},
+  {s:"Evolution",q:"Modern or synthetic theory of evolution was designated by:",opts:["Huxley","Hugo","Charles","Newton"],a:0},
+  {s:"Evolution",q:"Variability is an opposing force to:",opts:["Heredity","Adaptation","Cell","Organ"],a:0},
+  {s:"Evolution",q:"The difference between Neo-Darwinism and Darwinism's natural selection is:",opts:["Evolution","Competition","Survival of the fittest","Cell"],a:0},
+  {s:"Evolution",q:"Reproductive isolation is among the postulates of:",opts:["Neo-Darwinism","Darwinism","Lamarckism","None"],a:0},
+  {s:"Evolution",q:"Bacteria is an example of:",opts:["Decomposers","Producers","Consumers","Autotrophs"],a:0},
+];
+
+// Topic list
+const TOPICS = [...new Set(ALL_QS.map(q=>q.s))];
+let selected = new Set(TOPICS);
+let quizQs=[], cur=0, answers=[], skipped=[], timer=null, timerSec=0, timerMax=0;
+
+// Build topic buttons
+const tg = document.getElementById('topic-grid');
+TOPICS.forEach(t=>{
+  const b=document.createElement('button');
+  b.className='topic-btn active';
+  b.textContent=t+' ('+ALL_QS.filter(q=>q.s===t).length+' Qs)';
+  b.dataset.t=t;
+  b.onclick=()=>{
+    if(selected.has(t)){if(selected.size>1){selected.delete(t);b.className='topic-btn';}}
+    else{selected.add(t);b.className='topic-btn active';}
+    updateInfo();
+  };
+  tg.appendChild(b);
+});
+function updateInfo(){
+  const pool=ALL_QS.filter(q=>selected.has(q.s));
+  document.getElementById('qcount-info').textContent=`Available: ${pool.length} questions from selected topics`;
+  const inp=document.getElementById('qcount');
+  if(parseInt(inp.value)>pool.length) inp.value=pool.length;
+}
+function selectAll(){selected=new Set(TOPICS);document.querySelectorAll('.topic-btn').forEach(b=>b.className='topic-btn active');updateInfo();}
+function deselectAll(){
+  const first=TOPICS[0];selected=new Set([first]);
+  document.querySelectorAll('.topic-btn').forEach(b=>{b.className='topic-btn';if(b.dataset.t===first)b.className='topic-btn active';});
+  updateInfo();
+}
+updateInfo();
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function startQuiz(){
+  const pool=shuffle(ALL_QS.filter(q=>selected.has(q.s)));
+  let n=parseInt(document.getElementById('qcount').value)||20;
+  n=Math.min(n,pool.length);
+  quizQs=pool.slice(0,n);
+  answers=new Array(n).fill(null);
+  skipped=new Array(n).fill(false);
+  cur=0;
+  timerMax=parseInt(document.getElementById('timer-sel').value)||0;
+  document.getElementById('setup').style.display='none';
+  document.getElementById('quiz').style.display='block';
+  showQ();
+}
+
+function showQ(){
+  const q=quizQs[cur], total=quizQs.length;
+  document.getElementById('prog').style.width=((cur/total)*100)+'%';
+  document.getElementById('qnum').textContent=`Question ${cur+1} of ${total}`;
+  document.getElementById('sec-tag').textContent=q.s;
+  document.getElementById('qtext').textContent=(cur+1)+'. '+q.q;
+  document.getElementById('feedback').className='feedback';
+  document.getElementById('feedback').textContent='';
+  const opts=document.getElementById('opts');
+  opts.innerHTML='';
+  const letters=['A','B','C','D'];
+  q.opts.forEach((o,i)=>{
+    const d=document.createElement('div');
+    d.className='opt'+(answers[cur]===i?' selected':'');
+    d.innerHTML=`<div class="opt-letter">${letters[i]}</div><span>${o}</span>`;
+    if(answers[cur]!==null){
+      d.classList.add('locked');
+      if(i===q.a) d.classList.add('correct');
+      else if(answers[cur]===i) d.classList.add('wrong');
+    } else {
+      d.onclick=()=>selectOpt(i);
+    }
+    opts.appendChild(d);
+  });
+  document.getElementById('prev-btn').style.visibility=cur>0?'visible':'hidden';
+  document.getElementById('next-btn').textContent=cur===total-1?'Finish ✓':'Next ▶';
+  if(answers[cur]!==null) showFeedback(answers[cur]===quizQs[cur].a);
+  clearInterval(timer);
+  if(timerMax>0 && answers[cur]===null){
+    timerSec=timerMax;
+    updateTimerBadge();
+    document.getElementById('timer-badge').style.display='';
+    timer=setInterval(()=>{
+      timerSec--;
+      updateTimerBadge();
+      if(timerSec<=0){clearInterval(timer);autoSkip();}
+    },1000);
+  } else {
+    document.getElementById('timer-badge').style.display='none';
+  }
+}
+
+function updateTimerBadge(){
+  const b=document.getElementById('timer-badge');
+  b.textContent='⏱ '+timerSec+'s';
+  b.className='timer-badge'+(timerSec<=10?' warn':'');
+}
+function autoSkip(){if(answers[cur]===null){skipped[cur]=true;nextQ();}}
+
+function selectOpt(i){
+  if(answers[cur]!==null) return;
+  clearInterval(timer);
+  document.getElementById('timer-badge').style.display='none';
+  answers[cur]=i;
+  const correct=i===quizQs[cur].a;
+  document.querySelectorAll('.opt').forEach((d,idx)=>{
+    d.classList.add('locked');
+    d.onclick=null;
+    if(idx===quizQs[cur].a) d.classList.add('correct');
+    else if(idx===i) d.classList.add('wrong');
+  });
+  showFeedback(correct);
+}
+
+function showFeedback(correct){
+  const fb=document.getElementById('feedback');
+  if(correct){
+    fb.textContent='✅ Correct! Well done.';
+    fb.className='feedback correct';
+  } else {
+    fb.textContent='❌ Incorrect. Correct answer: '+quizQs[cur].opts[quizQs[cur].a];
+    fb.className='feedback wrong';
+  }
+}
+
+function nextQ(){
+  clearInterval(timer);
+  if(cur<quizQs.length-1){cur++;showQ();}
+  else finishQuiz();
+}
+function prevQ(){clearInterval(timer);if(cur>0){cur--;showQ();}}
+function skipQ(){if(answers[cur]===null){clearInterval(timer);skipped[cur]=true;nextQ();}}
+
+function finishQuiz(){
+  document.getElementById('quiz').style.display='none';
+  document.getElementById('results').style.display='block';
+  const total=quizQs.length;
+  const correct=answers.filter((a,i)=>a===quizQs[i].a).length;
+  const skippedCount=skipped.filter(Boolean).length;
+  const wrong=total-correct-skippedCount;
+  const pct=Math.round((correct/total)*100);
+  const circle=document.getElementById('score-circle');
+  circle.innerHTML=`${pct}%<small>${correct}/${total} correct</small>`;
+  let grade='',gc='';
+  if(pct>=70){grade='🎉 PASS — Great Work!';gc='#16a34a';}
+  else if(pct>=50){grade='⚠️ BORDERLINE — Keep Studying!';gc='#ca8a04';}
+  else{grade='❌ FAIL — More Revision Needed';gc='#dc2626';}
+  const gb=document.getElementById('grade-badge');
+  gb.textContent=grade;gb.style.color=gc;
+  document.getElementById('stat-row').innerHTML=`
+    <div class="stat"><div class="val" style="color:#16a34a">${correct}</div><div class="lbl">Correct</div></div>
+    <div class="stat"><div class="val" style="color:#dc2626">${wrong}</div><div class="lbl">Wrong</div></div>
+    <div class="stat"><div class="val" style="color:#ca8a04">${skippedCount}</div><div class="lbl">Skipped</div></div>
+    <div class="stat"><div class="val">${pct}%</div><div class="lbl">Score</div></div>`;
+  // Build review
+  const rl=document.getElementById('review-list');
+  rl.innerHTML='';
+  quizQs.forEach((q,i)=>{
+    const d=document.createElement('div');
+    const correct_q=answers[i]===q.a;
+    d.className='review-item '+(answers[i]===null?'':correct_q?'r-correct':'r-wrong');
+    const yourAns=answers[i]!==null?q.opts[answers[i]]:'(Skipped)';
+    d.innerHTML=`<div class="review-q">${i+1}. ${q.q}</div>
+      <div class="review-ans">Your answer: <span class="${answers[i]===null?'':'correct_q'?'ok':'bad'}">${yourAns}</span><br>
+      Correct: <span class="ok">${q.opts[q.a]}</span></div>`;
+    rl.appendChild(d);
+  });
+}
+
+let reviewVisible=false;
+function toggleReview(){
+  reviewVisible=!reviewVisible;
+  document.getElementById('review-list').style.display=reviewVisible?'block':'none';
+  document.getElementById('review-toggle').textContent=reviewVisible?'📝 Hide Answer Review':'📝 Show Answer Review';
+}
+function retryQuiz(){
+  answers=new Array(quizQs.length).fill(null);
+  skipped=new Array(quizQs.length).fill(false);
+  cur=0;reviewVisible=false;
+  document.getElementById('review-list').style.display='none';
+  document.getElementById('results').style.display='none';
+  document.getElementById('quiz').style.display='block';
+  showQ();
+}
+function goSetup(){
+  clearInterval(timer);
+  document.getElementById('results').style.display='none';
+  document.getElementById('setup').style.display='block';
+  reviewVisible=false;
+}
+</script>
+</body>
+</html>
